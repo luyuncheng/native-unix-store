@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Michaël Coquard
+ * Copyright [2018-2019] Michaël Coquard
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ public class MappedIndexInput extends IndexInput implements RandomAccessInput {
     this.guard = guard;
     this.offset = offset;
     this.pos = 0;
-    this.parent = parent; // Lucene ensure it never call close() on the main slice before accessing to the child slices
+    this.parent = parent; // Lucene ensures it never call close() on the main slice before accessing to the child slices
     if(parent == null)
       guard.open();
   }

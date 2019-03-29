@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Michaël Coquard
+ * Copyright [2018-2019] Michaël Coquard
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -77,6 +77,7 @@ public class NativeUnixStorePlugin extends Plugin implements IndexStorePlugin {
   public List<Setting<?>> getSettings()
   {
     List<Setting<?>> sets = new ArrayList<Setting<?>>();
+    
     sets.add(SETTING_DIRECT_READ_BUFFER_SIZE);
     sets.add(SETTING_DIRECT_WRITE_BUFFER_SIZE);
     sets.add(SETTING_DIRECT_READ_ENABLED);
@@ -85,6 +86,7 @@ public class NativeUnixStorePlugin extends Plugin implements IndexStorePlugin {
     sets.add(SETTING_MMAP_READ_AHEAD);
     sets.add(SETTING_MMAP_ENABLED);
     sets.add(SETTING_MMAP_MAX_PRELOAD_SIZE);
+
     return sets;
   }
 }

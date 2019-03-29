@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Michaël Coquard
+ * Copyright [2018-2019] Michaël Coquard
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -122,8 +122,26 @@ public class NativeUnixDirectory extends FSDirectory {
     return MappedIndexInput.makeInput(resourceDescription, guard);
   }
   
+  private IndexInput maybeMakeDirectIndexInput(Path path, String name, IOContext context) throws IOException {
+    if(this.directReadEnabled) {
+      return makeDirectIndexInput(path);
+    } else if(this.mappedMemory) {
+      return makeMappedIndexInput(path);
+    } else {
+      return delegate.openInput(name, context);
+    }
+  }
+  
   private IndexInput makeDirectIndexInput(Path path) throws IOException {
     return new DirectIndexInput(path, this.directReadBufferSize);
+  }
+  
+  private IndexOutput maybeMakeDirectIndexOutput(Path path, String name, IOContext context) throws IOException {
+    if(this.directWriteEnabled) {
+      return makeDirectIndexOutput(path);
+    } else {
+      return delegate.createOutput(name, context);
+    }
   }
   
   private IndexOutput makeDirectIndexOutput(Path path) throws IOException {
@@ -152,18 +170,10 @@ public class NativeUnixDirectory extends FSDirectory {
       }
     }
     else if(context.context == Context.MERGE && context.mergeInfo.estimatedMergeBytes >= this.minBytesDirect) {
-      if(this.directReadEnabled) {
-        return makeDirectIndexInput(path);
-      } else {
-        return delegate.openInput(name, context);
-      }
+      return maybeMakeDirectIndexInput(path, name, context);
     }
     else if(getFileSize(path) >= this.minBytesDirect) {
-      if(this.directReadEnabled) {
-        return makeDirectIndexInput(path);
-      } else {
-        return delegate.openInput(name, context);
-      }
+      return maybeMakeDirectIndexInput(path, name, context);
     }
     return delegate.openInput(name, context);
   }
@@ -175,11 +185,7 @@ public class NativeUnixDirectory extends FSDirectory {
     if(this.forceIO == ForceIO.Direct)
       return makeDirectIndexOutput(path);
     else if(context.context == Context.MERGE && context.mergeInfo.estimatedMergeBytes >= this.minBytesDirect) {
-      if(this.directWriteEnabled) {
-        return makeDirectIndexOutput(path);
-      } else {
-        return delegate.createOutput(name, context);
-      }
+      return maybeMakeDirectIndexOutput(path, name, context);
     }
     else if(context.context == Context.DEFAULT) {
       /*
@@ -192,11 +198,7 @@ public class NativeUnixDirectory extends FSDirectory {
         return delegate.createOutput(name, context);
       }
       else {
-        if(this.directWriteEnabled) {
-          return makeDirectIndexOutput(path);
-        } else {
-          return delegate.createOutput(name, context);
-        }
+        return maybeMakeDirectIndexOutput(path, name, context);
       }
     }
     return delegate.createOutput(name, context);
