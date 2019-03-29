@@ -61,8 +61,6 @@ dependencies {
 // Workaround for https://github.com/elastic/elasticsearch/issues/31324
 task testRandom(overwrite: true, type: com.carrotsearch.gradle.junit4.RandomizedTestingTask) {
   classpath = sourceSets.test.runtimeClasspath
-  //testClassesDir = sourceSets.test.output.classesDir
-  // for Gradle 5.x
   testClassesDirs = sourceSets.test.output
   systemProperty "java.library.path", rootProject.file("src/main/packaging/native")
   systemProperty "java.security.policy", rootProject.file("src/main/plugin-metadata/plugin-security.policy")
@@ -76,7 +74,7 @@ task testRandom(overwrite: true, type: com.carrotsearch.gradle.junit4.Randomized
   }
   // More memory for direct buffers used by direct IO tests
   jvmArgs = ["-XX:MaxDirectMemorySize=1024m","--illegal-access=debug"]
-  include "**/unit/*.class"
+  include "fr/micoq/elasticsearch/test/unit/*.class"
   dependsOn ":unsafe-tools:assemble"
   dependsOn "testClasses"
 }
@@ -120,7 +118,7 @@ forbiddenApisTest.enabled = false
 integTest.enabled = true
 
 integTestRunner {
-  include "**/integ/*.class"
+  include "fr/micoq/elasticsearch/test/integ/*.class"
 }
 
 integTestCluster {
