@@ -57,14 +57,11 @@ public class NativeUnixStorePlugin extends Plugin implements IndexStorePlugin {
   public static final Setting<ByteSizeValue> SETTING_MMAP_MAX_PRELOAD_SIZE =
       Setting.byteSizeSetting("index.store.mmap.max_preload_size",
       new ByteSizeValue(0,ByteSizeUnit.BYTES), Property.IndexScope, Property.Dynamic);
+  /*public static final Setting<Boolean> SETTING_TRACE =
+      Setting.boolSetting("index.store.trace", false, Property.IndexScope, Property.Dynamic);*/
   
   public NativeUnixStorePlugin(Settings settings) {
   }
-  
-  /*@Override
-  public void onIndexModule(IndexModule indexModule) {
-    indexModule.addIndexStore(STORE_TYPE, (settings)-> new NativeUnixIndexStore(settings));
-  }*/
 
   @Override
   public Map<String, Function<IndexSettings, IndexStore>> getIndexStoreFactories() {
@@ -86,6 +83,7 @@ public class NativeUnixStorePlugin extends Plugin implements IndexStorePlugin {
     sets.add(SETTING_MMAP_READ_AHEAD);
     sets.add(SETTING_MMAP_ENABLED);
     sets.add(SETTING_MMAP_MAX_PRELOAD_SIZE);
+    //sets.add(SETTING_TRACE);
 
     return sets;
   }

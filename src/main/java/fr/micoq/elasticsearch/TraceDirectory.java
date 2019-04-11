@@ -18,11 +18,11 @@ package fr.micoq.elasticsearch;
 // Like strace... for Lucene :)
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Collection;
 
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.IOContext;
-import org.apache.lucene.store.IOContext.Context;
 import org.apache.lucene.store.IndexInput;
 import org.apache.lucene.store.IndexOutput;
 import org.apache.lucene.store.Lock;
@@ -30,265 +30,236 @@ import org.apache.lucene.store.Lock;
 public class TraceDirectory extends Directory {
 
   private Directory delegate;
-  private boolean dontdelete;
-  private boolean traceData;
-
-  private String contextToString(IOContext context) 
-  {
-    String iocon = null;
-    String con = null;
-    if(context == IOContext.READ) {
-      iocon = "READ";
-    } else if (context == IOContext.DEFAULT) {
-      iocon = "DEFAULT";
-    } else if (context == IOContext.READONCE) {
-      iocon = "READONCE";
-    } else {
-      iocon = "other";
-    }
-    if(context.context == Context.DEFAULT) {
-      con = "DEFAULT";
-    } else if(context.context == Context.FLUSH) {
-      con = "FLUSH";
-    } else if(context.context == Context.MERGE) {
-      con = "MERGE";
-    } else if(context.context == Context.READ) {
-      con = "READ";
-    } else {
-      con = "other";
-    }
-    return String.format("%s/%s",iocon,con);
-  }
+  private TraceDirectoryEventHandler handler;
+  private Path location;
   
-  public TraceDirectory(Directory delegate) {
-    this(delegate,false,false);
-  }
-  
-  public TraceDirectory(Directory delegate, boolean dontdelete, boolean traceData) {
+  public TraceDirectory(Path location, Directory delegate, TraceDirectoryEventHandler handler) {
     this.delegate = delegate;
-    this.dontdelete = dontdelete;
-    this.traceData = traceData;
+    this.handler = handler;
+    this.location = location;
   }
   
   @Override
   public void close() throws IOException {
-    System.out.println(String.format("[%s,%s] Directory.close()",
-        Thread.currentThread().getName(),this.toString()));
     this.delegate.close();
+    this.handler.traceCloseDirectory(this.location);
   }
   
   @Override
   public IndexOutput createOutput(String name, IOContext context) throws IOException {
-    System.out.println(String.format("[%s,%s] Directory.createOutput(%s,%s)",
-        Thread.currentThread().getName(),this.toString(),name,contextToString(context)));
-    String resourceDescription = name;
-    return new TraceIndexOutput(resourceDescription, name, this.delegate.createOutput(name,context));
+    String resourceDescription = String.format("TraceIndexOutput(%s)",name);
+    IndexOutput output = this.delegate.createOutput(name, context);
+    this.handler.traceCreateOutput(this.location, output, name, context);
+    return new TraceIndexOutput(this.handler, resourceDescription, name, context, output);
   }
   
   @Override
   public IndexOutput createTempOutput(String prefix, String suffix, IOContext context) throws IOException {
-    System.out.println(String.format("[%s,%s] Directory.createTempOutput()",
-        Thread.currentThread().getName(),this.toString(),contextToString(context)));
-    return new TraceIndexOutput(prefix+suffix, prefix, this.delegate.createTempOutput(prefix,suffix,context));
+    IndexOutput output = this.delegate.createTempOutput(prefix, suffix, context);
+    this.handler.traceCreateTempOutput(this.location, output, prefix, suffix, context);
+    return new TraceIndexOutput(this.handler, suffix, prefix, context, output);
   }
   
   @Override
   public void deleteFile(String name) throws IOException {
-    System.out.println(String.format("[%s,%s] Directory.deleteFile(%s)",
-        Thread.currentThread().getName(),this.toString(),name));
-    if(!this.dontdelete)
-      this.delegate.deleteFile(name);
+    this.delegate.deleteFile(name);
+    this.handler.traceDeleteFile(this.location, name);
   }
   
   @Override
   public long fileLength(String name) throws IOException {
     long l = this.delegate.fileLength(name);
-    System.out.println(String.format("[%s,%s] Directory.fileLength(%s) = %d",
-        Thread.currentThread().getName(),this.toString(),name,l));
+    this.handler.traceFileLength(this.location, name,l);
     return l;
   }
   
   @Override
   public String[] listAll() throws IOException {
-    System.out.println(String.format("[%s,%s] Directory.listAll()",
-        Thread.currentThread().getName(),this.toString()));
+    this.handler.traceListAll(this.location);
     return this.delegate.listAll();
   }
   
   @Override
   public Lock obtainLock(String name) throws IOException {
-    System.out.println(String.format("[%s,%s] Directory.obtainLock(%s)",
-        Thread.currentThread().getName(),this.toString(),name));
-    return new TraceLock(delegate.obtainLock(name));
+    Lock lock = new TraceLock(this.handler, this.delegate.obtainLock(name));
+    this.handler.traceObtainLock(this.location, name);
+    return lock;
   }
   
   @Override
   public IndexInput openInput(String name, IOContext context) throws IOException {
-    System.out.println(String.format("[%s,%s] Directory.openInput(%s,%s)",
-        Thread.currentThread().getName(),this.toString(),name,contextToString(context)));
-    return new TraceIndexInput(name,this.delegate.openInput(name, context));
+    String resourceDescription = String.format("TraceIndexInput(%s)", name);
+    IndexInput input = this.delegate.openInput(name, context);
+    this.handler.traceOpenInput(this.location, input, name, context);
+    return new TraceIndexInput(this.handler, resourceDescription, name, input);
   }
   
   @Override
   public void rename(String fromName, String toName) throws IOException {
-    System.out.println(String.format("[%s,%s] Directory.rename(%s,%s)",
-        Thread.currentThread().getName(),this.toString(),fromName,toName));
     this.delegate.rename(fromName,toName);
+    this.handler.traceRename(this.location, fromName, toName);
   }
   
   @Override
   public void sync(Collection<String> files) throws IOException {
-    System.out.println(String.format("[%s,%s] Directory.sync()",
-        Thread.currentThread().getName(),this.toString()));
     this.delegate.sync(files);
+    this.handler.traceSync(this.location, files);
   }
   
   @Override
   public void syncMetaData() throws IOException {
-    System.out.println(String.format("[%s,%s] Directory.syncMetaData()",
-        Thread.currentThread().getName(),this.toString()));
     this.delegate.syncMetaData();
+    this.handler.traceSyncMetaData(this.location);
   }
   
   private class TraceIndexOutput extends IndexOutput {
     private IndexOutput delegateOutput;
+    private int outputId; 
+    private TraceDirectoryEventHandler handler;
+    private String outputName;
     
-    protected TraceIndexOutput(String resourceDescription, String name, IndexOutput delegateOutput) {
+    protected TraceIndexOutput(
+        TraceDirectoryEventHandler handler,
+        String resourceDescription,
+        String name,
+        IOContext context,
+        IndexOutput delegateOutput) {
       super(resourceDescription, name);
       this.delegateOutput = delegateOutput;
+      this.handler = handler;
+      this.outputName = name;
+      this.outputId = delegateOutput.hashCode();
     }
     
     @Override
     public void close() throws IOException {
-      System.out.println(String.format("[%s,%s] IndexOutput.close()",
-          Thread.currentThread().getName(),this.toString()));
       this.delegateOutput.close();
+      this.handler.traceCloseOutput(this.outputName, this.outputId);
     }
     
     @Override
     public long getChecksum() throws IOException {
       long c = this.delegateOutput.getChecksum();
-      System.out.println(String.format("[%s,%s] IndexOutput.getChecksum() = 0x%016x",
-          Thread.currentThread().getName(),this.toString(),c));
+      this.handler.traceChecksumIndexOutput(this.outputName, this.outputId, c);
       return c;
     }
     
     @Override
     public long getFilePointer() {
       long p = this.delegateOutput.getFilePointer(); 
-      if(traceData)
-        System.out.println(String.format("[%s,%s] IndexOutput.getFilePointer() = %d",
-            Thread.currentThread().getName(),this.toString(),p));
+      this.handler.traceFilePointerOutput(this.outputName, this.outputId, p);
       return p;
     }
     
     @Override
     public void writeByte(byte b) throws IOException {
-      if(traceData)
-        System.out.println(String.format("[%s,%s] IndexOutput.writeByte(0x%02x)",
-            Thread.currentThread().getName(),this.toString(),b));
       this.delegateOutput.writeByte(b);
+      this.handler.traceWriteByte(this.outputName, this.outputId, b);
     }
   
     @Override
     public void writeBytes(byte[] data, int offset, int length) throws IOException {
-      if(traceData)
-        System.out.println(String.format("[%s,%s] IndexOutput.writeBytes(data[%d] @ %d)",
-            Thread.currentThread().getName(),this.toString(),length,offset));
       this.delegateOutput.writeBytes(data, offset, length);
+      this.handler.traceWriteBytes(this.outputName, this.outputId, data, offset, length);
     }
   }
 
   private class TraceIndexInput extends IndexInput {
     private IndexInput delegateInput;
+    private int inputId;
+    private TraceDirectoryEventHandler handler;
+    private String inputName;
     
-    protected TraceIndexInput(String resourceDescription, IndexInput delegateInput) {
+    protected TraceIndexInput(TraceDirectoryEventHandler handler, String resourceDescription, String name, IndexInput delegateInput) {
       super(resourceDescription);
       this.delegateInput = delegateInput;
+      this.handler = handler;
+      this.inputName = name;
+      this.inputId = delegateInput.hashCode();
     }
     
     @Override
     public void readBytes(byte[] data, int offset, int length) throws IOException {
-      if(traceData)
-        System.out.println(String.format("[%s,%s] IndexInput.readBytes(data[%d] @ %d)",
-            Thread.currentThread().getName(),this.toString(),length,offset));
-      this.delegateInput.readBytes(data,offset,length);
+      long currentOffset = this.delegateInput.getFilePointer();
+      this.delegateInput.readBytes(data, offset, length);
+      this.handler.traceReadBytes(this.inputName, this.inputId, currentOffset, data, offset, length);
     }
     
     @Override
     public byte readByte() throws IOException {
+      long currentOffset = this.delegateInput.getFilePointer();
       byte b = this.delegateInput.readByte();
-      if(traceData)
-        System.out.println(String.format("[%s,%s] IndexInput.readByte() = 0x%02x",
-            Thread.currentThread().getName(),this.toString(),b));
+      this.handler.traceReadByte(this.inputName, this.inputId, currentOffset, b);
       return b;
     }
     
     @Override
     public IndexInput clone() {
-      System.out.println(String.format("[%s,%s] IndexInput.clone()",
-          Thread.currentThread().getName(),this.toString()));
-      return delegateInput.clone();
+      String resourceDescription = String.format("TraceIndexInput()");
+      IndexInput input = new TraceIndexInput(this.handler, resourceDescription, this.inputName, delegateInput.clone());
+      this.handler.traceCloneInput(this.inputName, this.inputId);
+      return input;
     }
     
     @Override
     public IndexInput slice(String name, long offset, long length) throws IOException {
-      System.out.println(String.format("[%s,%s] IndexInput.slice(name=%s @ %d, length=%d)",
-          Thread.currentThread().getName(),this.toString(),name,offset,length));
-      return this.delegateInput.slice(name, offset, length);
+      String resourceDescription = String.format("TraceIndexInput()");
+      IndexInput input = new TraceIndexInput(
+          this.handler,
+          resourceDescription,
+          this.inputName,
+          this.delegateInput.slice(name, offset, length));
+      this.handler.traceSlice(this.inputName, this.inputId, name, offset, length);
+      return input;
     }
     
     @Override
     public void seek(long offset) throws IOException {
-      if(traceData)
-        System.out.println(String.format("[%s,%s] IndexInput.seek(%d)",
-            Thread.currentThread().getName(),this.toString(),offset));
       this.delegateInput.seek(offset);
+      this.handler.traceSeek(this.inputName, this.inputId, offset);
     }
     
     @Override
     public long length() {
       long l = this.delegateInput.length();
-      System.out.println(String.format("[%s,%s] IndexInput.length() = %d",
-          Thread.currentThread().getName(),this.toString(),l));
+      this.handler.traceLength(this.inputName, this.inputId, l);
       return l;
     }
     
     @Override
     public long getFilePointer() {
       long p = this.delegateInput.getFilePointer();
-      if(traceData)
-        System.out.println(String.format("[%s,%s] IndexInput.getFilePointer() = %d",
-            Thread.currentThread().getName(),this.toString(),p));
+      this.handler.traceFilePointerInput(this.inputName, this.inputId, p);
       return p;
     }
     
     @Override
     public void close() throws IOException {
-      System.out.println(String.format("[%s,%s] IndexInput.close()",
-          Thread.currentThread().getName(),this.toString()));
       this.delegateInput.close();
+      this.handler.traceCloseInput(this.inputName, this.inputId);
     }
   }
   
   private class TraceLock extends Lock {
   
     private Lock delegateLock;
+    private TraceDirectoryEventHandler handler;
     
-    TraceLock(Lock delegateLock) {
+    TraceLock(TraceDirectoryEventHandler handler, Lock delegateLock) {
       this.delegateLock = delegateLock;
+      this.handler = handler;
     }
     
     @Override
     public void close() throws IOException {
-      System.out.println("Lock.close()");
       this.delegateLock.close();
+      this.handler.traceCloseLock();
     }
     
     @Override
     public void ensureValid() throws IOException {
-      System.out.println("Lock.ensureValid()");
       this.delegateLock.ensureValid();
+      this.handler.traceEnsureValidLock();
     }
   }
 }

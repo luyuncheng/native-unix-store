@@ -74,7 +74,7 @@ task testRandom(overwrite: true, type: com.carrotsearch.gradle.junit4.Randomized
   }
   // More memory for direct buffers used by direct IO tests
   jvmArgs = ["-XX:MaxDirectMemorySize=1024m","--illegal-access=debug"]
-  include "fr/micoq/elasticsearch/test/unit/*.class"
+  include "**/unit/*.class"
   dependsOn ":unsafe-tools:assemble"
   dependsOn "testClasses"
 }
@@ -118,7 +118,7 @@ forbiddenApisTest.enabled = false
 integTest.enabled = true
 
 integTestRunner {
-  include "fr/micoq/elasticsearch/test/integ/*.class"
+  include "**/integ/*.class"
 }
 
 integTestCluster {

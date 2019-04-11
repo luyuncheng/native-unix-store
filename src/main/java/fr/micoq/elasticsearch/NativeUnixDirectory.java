@@ -107,7 +107,7 @@ public class NativeUnixDirectory extends FSDirectory {
     this.delegate = new NIOFSDirectory(path, lockFactory);
   }
   
-  private IndexInput makeMappedIndexInput(Path path) throws IOException {
+  private IndexInput makeMappedIndexInput(Path path, boolean readahead) throws IOException {
     String fileName = path.toString();
     MappedMemory memory = MappedMemory.mapFile(fileName);
     String fileExt = FileSwitchDirectory.getExtension(fileName);
@@ -115,18 +115,25 @@ public class NativeUnixDirectory extends FSDirectory {
        (this.maxBytesPreload == 0 || this.maxBytesPreload <= memory.getLength())) {
       memory.preload();
     }
-    if(!this.memoryReadAhead)
+    if(readahead) {
+      memory.madviseSequential();
+    }
+    else {
       memory.madviseRandom();
+    }
     final String resourceDescription = "MMapIndexInput(path=\"" + path.toString() + "\")";
     final MappedIndexInputGuard guard = new MappedIndexInputGuard(memory);
     return MappedIndexInput.makeInput(resourceDescription, guard);
   }
   
   private IndexInput maybeMakeDirectIndexInput(Path path, String name, IOContext context) throws IOException {
-    if(this.directReadEnabled) {
+    if(this.directReadEnabled && (
+        (context.context == Context.MERGE && context.mergeInfo.estimatedMergeBytes >= this.minBytesDirect) ||
+        getFileSize(path) >= this.minBytesDirect
+      )) {
       return makeDirectIndexInput(path);
     } else if(this.mappedMemory) {
-      return makeMappedIndexInput(path);
+      return makeMappedIndexInput(path, true); // Always read ahead here since we don't do search requests
     } else {
       return delegate.openInput(name, context);
     }
@@ -160,22 +167,16 @@ public class NativeUnixDirectory extends FSDirectory {
     if(this.forceIO == ForceIO.Direct)
       return makeDirectIndexInput(path);
     else if(this.forceIO == ForceIO.MappedMemory)
-      return makeMappedIndexInput(path);
+      return makeMappedIndexInput(path, this.memoryReadAhead);
     else if(context.context == Context.READ && !context.readOnce) {
       // Search operations needs to be cached
       if(this.mappedMemory) {
-        return makeMappedIndexInput(path);
+        return makeMappedIndexInput(path, this.memoryReadAhead);
       } else {
         return delegate.openInput(name, context);
       }
     }
-    else if(context.context == Context.MERGE && context.mergeInfo.estimatedMergeBytes >= this.minBytesDirect) {
-      return maybeMakeDirectIndexInput(path, name, context);
-    }
-    else if(getFileSize(path) >= this.minBytesDirect) {
-      return maybeMakeDirectIndexInput(path, name, context);
-    }
-    return delegate.openInput(name, context);
+    return maybeMakeDirectIndexInput(path, name, context);
   }
   
   @Override

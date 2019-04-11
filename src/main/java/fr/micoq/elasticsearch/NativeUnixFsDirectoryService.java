@@ -55,8 +55,9 @@ public class NativeUnixFsDirectoryService extends FsDirectoryService {
     if(preLoadExtensions.contains("*")) {
       preLoadExtensions = null; // preload all files
     }
+    //boolean trace = indexSettings.getValue(NativeUnixStorePlugin.SETTING_TRACE);
     
-    return new NativeUnixDirectory(
+    Directory directory = new NativeUnixDirectory(
       location,
       lockFactory,
       mmapEnabled,
@@ -69,5 +70,11 @@ public class NativeUnixFsDirectoryService extends FsDirectoryService {
       minBytesDirect,
       maxBytesPreload,
       preLoadExtensions);
+    
+    /*if(trace) {
+      return new TraceDirectory(location, directory, new TraceDirectoryStatsPrinter()); //TODO find a better output than stdout
+    }*/
+    return directory;
+    
   }
 }
