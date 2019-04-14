@@ -33,11 +33,13 @@ import org.elasticsearch.test.hamcrest.ElasticsearchAssertions;
 import org.junit.Before;
 import org.junit.runner.RunWith;
 
+import com.carrotsearch.randomizedtesting.RandomizedRunner;
+
 import fr.micoq.elasticsearch.NativeUnixStorePlugin;
 
 @ESIntegTestCase.ClusterScope(scope=ESIntegTestCase.Scope.SUITE, numDataNodes=1)
-@RunWith(com.carrotsearch.randomizedtesting.RandomizedRunner.class)
-public class PluginIntegTests extends ESIntegTestCase {
+@RunWith(RandomizedRunner.class)
+public class PluginIntegIT extends ESIntegTestCase {
   
   private static String INDEX = "native_index";
   

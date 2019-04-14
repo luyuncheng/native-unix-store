@@ -163,13 +163,13 @@ The embedded tests uses the framework provided by Elasticsearch and Lucene.
 ### Unit tests
 To run the embedded unit tests, use this command:
 ```
-JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64 ./gradlew testRandom
+JAVA_HOME=/usr/lib/jvm/java-12-openjdk-amd64 ./gradlew unitTest
 ```
 
 ###  Integration tests
 To run the embedded integration tests, use this command:
 ```
-JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64 ./gradlew integTest
+JAVA_HOME=/usr/lib/jvm/java-12-openjdk-amd64 ./gradlew integTest
 ```
 
 ## Issues

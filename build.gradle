@@ -33,9 +33,6 @@ apply plugin: "java"
 apply plugin: "idea"
 apply plugin: "elasticsearch.esplugin"
 
-check.dependsOn.remove(test)
-tasks.remove(test)
-
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
@@ -58,25 +55,19 @@ dependencies {
   testCompile "org.elasticsearch.test:framework:${elasticsearchVersion}"
 }
 
-// Workaround for https://github.com/elastic/elasticsearch/issues/31324
-task testRandom(overwrite: true, type: com.carrotsearch.gradle.junit4.RandomizedTestingTask) {
+unitTest {
   classpath = sourceSets.test.runtimeClasspath
   testClassesDirs = sourceSets.test.output
   systemProperty "java.library.path", rootProject.file("src/main/packaging/native")
   systemProperty "java.security.policy", rootProject.file("src/main/plugin-metadata/plugin-security.policy")
-  systemProperty "tests.gradle", true
   // We must avoid "/tmp" which can be mounted as tmpfs and therefore incompatible with direct I/O 
-  systemProperty "java.io.tmpdir", file("${buildDir}/testrun/temp")
-  // Stdout
-  testLogging {
-      outputs.upToDateWhen {false}
-      outputMode "always"
-  }
+  //systemProperty "java.io.tmpdir", file("${buildDir}/testrun/unitTest/temp")
   // More memory for direct buffers used by direct IO tests
-  jvmArgs = ["-XX:MaxDirectMemorySize=1024m","--illegal-access=debug"]
+  jvmArgs = ["-XX:MaxDirectMemorySize=1024m", "--illegal-access=debug"]
+  exclude "**/integ/*.class"
   include "**/unit/*.class"
   dependsOn ":unsafe-tools:assemble"
-  dependsOn "testClasses"
+  dependsOn ":bundlePlugin"
 }
 
 task copyJavaLibs(type: Copy) {
@@ -107,22 +98,17 @@ assemble {
   dependsOn "bundlePlugin"
 }
 
-check {
-  dependsOn "testRandom"
-}
-
 // Allow Unsafe and native libraries
 forbiddenApisMain.enabled = false
 forbiddenApisTest.enabled = false
 
-integTest.enabled = true
-
-integTestRunner {
-  include "**/integ/*.class"
-}
-
 integTestCluster {
   systemProperty "java.library.path", "./plugins/${name}/native"
+  jvmArgs = "-XX:MaxDirectMemorySize=1024m"
+  // To avoid the error "Failed to locate seed node transport file"
+  unicastTransportUri = {seedNode, node, ant ->
+  	return null
+  }
 }
 
 task cleanPackaging(type: Delete) {
