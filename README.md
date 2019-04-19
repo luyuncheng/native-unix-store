@@ -58,11 +58,24 @@ Add this line in `config/jvm.options`
 ```
 -Djava.library.path=plugins/native-unix-store/native
 ```
+
 **Note:** This option is required by the Elasticsearch JVM to locate the native libraries (*.so). The path is relative to the working directory of the JVM (by default it's the root of the Elasticsearch directory).
 
-## Usage
+## Usage and configuration
+### Enable the store on indices
+The store type must be changed to `nativeunixfs` on indices on which you want to use the plugin:
+
+```
+PUT /my_index
+{
+  "settings": {
+    "index.store.type": "nativeunixfs"
+  }
+}
+```
+
 ### Index properties
-The store type `nativeunixfs` come with some properties which can be configured at the index creation.
+The store come with some properties which can be configured at the index creation.
 
 **Note**: All the properties can be dynamically changed but the index must be closed and reopened to take the changes into account.
 
@@ -150,13 +163,13 @@ The embedded tests uses the framework provided by Elasticsearch and Lucene.
 ### Unit tests
 To run the embedded unit tests, use this command:
 ```
-JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64 ./gradlew testRandom
+JAVA_HOME=/usr/lib/jvm/java-12-openjdk-amd64 ./gradlew unitTest
 ```
 
 ###  Integration tests
 To run the embedded integration tests, use this command:
 ```
-JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64 ./gradlew integTest
+JAVA_HOME=/usr/lib/jvm/java-12-openjdk-amd64 ./gradlew integTest
 ```
 
 ## Issues

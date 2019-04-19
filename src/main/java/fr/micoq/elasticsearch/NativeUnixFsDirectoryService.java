@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Michaël Coquard
+ * Copyright [2018-2019] Michaël Coquard
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ import fr.micoq.elasticsearch.NativeUnixDirectory.ForceIO;
 public class NativeUnixFsDirectoryService extends FsDirectoryService {
 
   public NativeUnixFsDirectoryService(IndexSettings indexSettings, IndexStore indexStore, ShardPath path) {
-    super(indexSettings, indexStore, path);
+    super(indexSettings, path);
   }
 
   @Override
@@ -55,8 +55,9 @@ public class NativeUnixFsDirectoryService extends FsDirectoryService {
     if(preLoadExtensions.contains("*")) {
       preLoadExtensions = null; // preload all files
     }
+    //boolean trace = indexSettings.getValue(NativeUnixStorePlugin.SETTING_TRACE);
     
-    return new NativeUnixDirectory(
+    Directory directory = new NativeUnixDirectory(
       location,
       lockFactory,
       mmapEnabled,
@@ -69,5 +70,11 @@ public class NativeUnixFsDirectoryService extends FsDirectoryService {
       minBytesDirect,
       maxBytesPreload,
       preLoadExtensions);
+    
+    /*if(trace) {
+      return new TraceDirectory(location, directory, new TraceDirectoryStatsPrinter()); //TODO find a better output than stdout
+    }*/
+    return directory;
+    
   }
 }

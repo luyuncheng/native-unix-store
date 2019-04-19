@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Michaël Coquard
+ * Copyright [2018-2019] Michaël Coquard
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,14 +57,11 @@ public class NativeUnixStorePlugin extends Plugin implements IndexStorePlugin {
   public static final Setting<ByteSizeValue> SETTING_MMAP_MAX_PRELOAD_SIZE =
       Setting.byteSizeSetting("index.store.mmap.max_preload_size",
       new ByteSizeValue(0,ByteSizeUnit.BYTES), Property.IndexScope, Property.Dynamic);
+  /*public static final Setting<Boolean> SETTING_TRACE =
+      Setting.boolSetting("index.store.trace", false, Property.IndexScope, Property.Dynamic);*/
   
   public NativeUnixStorePlugin(Settings settings) {
   }
-  
-  /*@Override
-  public void onIndexModule(IndexModule indexModule) {
-    indexModule.addIndexStore(STORE_TYPE, (settings)-> new NativeUnixIndexStore(settings));
-  }*/
 
   @Override
   public Map<String, Function<IndexSettings, IndexStore>> getIndexStoreFactories() {
@@ -77,6 +74,7 @@ public class NativeUnixStorePlugin extends Plugin implements IndexStorePlugin {
   public List<Setting<?>> getSettings()
   {
     List<Setting<?>> sets = new ArrayList<Setting<?>>();
+    
     sets.add(SETTING_DIRECT_READ_BUFFER_SIZE);
     sets.add(SETTING_DIRECT_WRITE_BUFFER_SIZE);
     sets.add(SETTING_DIRECT_READ_ENABLED);
@@ -85,6 +83,8 @@ public class NativeUnixStorePlugin extends Plugin implements IndexStorePlugin {
     sets.add(SETTING_MMAP_READ_AHEAD);
     sets.add(SETTING_MMAP_ENABLED);
     sets.add(SETTING_MMAP_MAX_PRELOAD_SIZE);
+    //sets.add(SETTING_TRACE);
+
     return sets;
   }
 }

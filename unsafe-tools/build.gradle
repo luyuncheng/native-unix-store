@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Michaël Coquard
+ * Copyright [2018-2019] Michaël Coquard
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,9 +21,6 @@ compileJava {
   // Allow buffer classes to be visible (for Java 9+ target)
   //options.compilerArgs.addAll(['--add-exports', 'java.base/sun.nio.ch=ALL-UNNAMED', '-Xlint:deprecation'])
 }
-
-check.dependsOn.remove(test)
-tasks.remove(test)
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8

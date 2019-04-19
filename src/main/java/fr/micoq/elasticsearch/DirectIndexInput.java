@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Michaël Coquard
+ * Copyright [2018-2019] Michaël Coquard
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -78,7 +78,7 @@ final class DirectIndexInput extends IndexInput {
     this.channel = other.channel;
     this.cloned = true;
     this.buffer = null;
-    this.clones = other.clones; // Needeed for chained clones
+    this.clones = other.clones; // Needed for chained clones
     this.clones.add(this);
     this.bufferSize = other.bufferSize;
     this.bufferPos = other.bufferPos;
