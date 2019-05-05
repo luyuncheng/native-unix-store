@@ -33,7 +33,7 @@ import fr.micoq.elasticsearch.NativeUnixDirectory.ForceIO;
 public class NativeUnixFsDirectoryService extends FsDirectoryService {
 
   public NativeUnixFsDirectoryService(IndexSettings indexSettings, IndexStore indexStore, ShardPath path) {
-    super(indexSettings, path);
+    super(indexSettings, indexStore, path);
   }
 
   @Override
